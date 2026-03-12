@@ -19,14 +19,13 @@ export default function AdminLoginPage() {
   const router = useRouter()
 
   useEffect(() => {
-    const supabase = createClient()
     const floristId = process.env.NEXT_PUBLIC_FLORIST_ID
     if (floristId) {
       createClient()
         .rpc("sp_get_florist", { p_florist_id: floristId })
         .single()
         .then(({ data }) => {
-          const name = data?.name as string | undefined
+          const name = (data as { name?: string } | null)?.name
           if (name) setShopName(name)
         })
       adminRpc<{ admin_exists?: boolean; exists?: boolean } | Array<{ admin_exists?: boolean; exists?: boolean }>>(

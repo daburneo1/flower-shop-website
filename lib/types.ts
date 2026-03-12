@@ -24,8 +24,8 @@ export interface HeroSlide {
   title: string | null
   subtitle?: string | null
   description?: string | null
-  display_order?: number
-  sort_order?: number
+  display_order?: number | null
+  sort_order?: number | null
   is_active?: boolean | null
   active?: boolean | null
   created_at?: string | null
@@ -76,7 +76,8 @@ export interface PaymentMethod {
 
 export interface MobilePaymentProvider {
   id: string
-  payment_method_id?: string
+  florist_id?: string | null
+  payment_method_id?: string | null
   name: string
   qr_code_url?: string | null
   qr_image_url?: string | null

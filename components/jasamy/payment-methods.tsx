@@ -12,7 +12,7 @@ const iconMap: Record<string, React.ElementType> = {
   creditcard: CreditCard,
 }
 
-function getIcon(iconName: string | null): React.ElementType {
+function getIcon(iconName: string | null | undefined): React.ElementType {
   if (!iconName) return Banknote
   return iconMap[iconName.toLowerCase()] ?? Banknote
 }

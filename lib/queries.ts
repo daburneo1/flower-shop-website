@@ -14,6 +14,7 @@ import type {
   Category,
   Product,
   PaymentMethod,
+  MobilePaymentProvider,
   AboutSection,
   ContactMethod,
   SocialLink,
@@ -97,14 +98,14 @@ export async function getPaymentMethods(): Promise<PaymentMethod[]> {
     p_florist_id: floristId,
   })
 
-  const mappedMethods = (methods ?? []).map((row: Record<string, unknown>) =>
+  const mappedMethods: PaymentMethod[] = (methods ?? []).map((row: Record<string, unknown>) =>
     mapPaymentMethodRow(row, floristId),
   )
-  const mappedProviders = (providers ?? []).map((row: Record<string, unknown>) =>
+  const mappedProviders: MobilePaymentProvider[] = (providers ?? []).map((row: Record<string, unknown>) =>
     mapMobilePaymentProviderRow(row, floristId),
   )
 
-  return mappedMethods.map((method) =>
+  return mappedMethods.map((method: PaymentMethod) =>
     method.code?.toUpperCase() === "MOBILE_PAY"
       ? { ...method, providers: mappedProviders }
       : method,

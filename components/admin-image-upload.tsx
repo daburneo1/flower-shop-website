@@ -127,6 +127,9 @@ export function AdminImageUpload({
                                 <p className="text-sm text-muted-foreground">
                                     Arrastra una imagen aqui o haz clic para seleccionarla
                                 </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Formatos permitidos: JPG, PNG, WEBP. Maximo 5MB.
+                                </p>
                             </>
                         )}
 
