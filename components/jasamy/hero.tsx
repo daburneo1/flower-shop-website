@@ -41,7 +41,7 @@ export function Hero({ florist }: HeroProps) {
   return (
     <section
       id="inicio"
-      className="relative flex min-h-[50vh] items-center justify-center overflow-hidden lg:min-h-[60vh]"
+      className="relative flex min-h-[68vh] items-center justify-center overflow-hidden pt-24 lg:min-h-[78vh]"
       aria-roledescription="carousel"
       aria-label={`Trabajos recientes de ${florist.name}`}
     >
@@ -55,18 +55,14 @@ export function Hero({ florist }: HeroProps) {
           aria-label={`${i + 1} de ${slides.length}: ${slide.alt}`}
         >
           <Image src={slide.image} alt={slide.alt} fill className="object-cover" priority={i === 0} />
-          <div className="absolute inset-0 bg-foreground/25" />
+          <div className="absolute inset-0 bg-black/35" />
         </div>
       ))}
-
-      <span className="absolute left-1/2 top-8 z-10 -translate-x-1/2 whitespace-nowrap font-serif text-2xl font-medium tracking-wide text-card/85 drop-shadow-sm md:top-10 md:text-3xl lg:text-4xl">
-        {`${florist.name}${florist.tagline ? ` | ${florist.tagline}` : ""}`}
-      </span>
 
       <button
         type="button"
         onClick={prev}
-        className="absolute left-4 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-card/20 bg-card/10 text-card backdrop-blur-sm transition-all hover:bg-card/25 md:left-8 md:h-11 md:w-11"
+        className="absolute left-4 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-card/35 bg-card/15 text-card backdrop-blur-sm transition-all hover:bg-card/25 md:left-8 md:h-11 md:w-11"
         aria-label="Diapositiva anterior"
       >
         <ChevronLeft className="h-5 w-5" />
@@ -74,7 +70,7 @@ export function Hero({ florist }: HeroProps) {
       <button
         type="button"
         onClick={next}
-        className="absolute right-4 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-card/20 bg-card/10 text-card backdrop-blur-sm transition-all hover:bg-card/25 md:right-8 md:h-11 md:w-11"
+        className="absolute right-4 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-card/35 bg-card/15 text-card backdrop-blur-sm transition-all hover:bg-card/25 md:right-8 md:h-11 md:w-11"
         aria-label="Siguiente diapositiva"
       >
         <ChevronRight className="h-5 w-5" />

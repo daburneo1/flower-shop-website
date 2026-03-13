@@ -11,6 +11,8 @@ export interface Florist {
   business_hours?: string | null
   logo_url?: string | null
   phone?: string | null
+  latitude?: number | null
+  longitude?: number | null
   theme?: Record<string, unknown> | null
   active?: boolean | null
   created_at?: string | null

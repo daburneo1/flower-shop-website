@@ -9,6 +9,11 @@ import type {
 } from "@/lib/types"
 
 export function mapFloristRow(row: Record<string, unknown>, floristId: string): Florist {
+  const latitudeRaw = row.latitude
+  const longitudeRaw = row.longitude
+  const latitude = latitudeRaw == null || latitudeRaw === "" ? null : Number(latitudeRaw)
+  const longitude = longitudeRaw == null || longitudeRaw === "" ? null : Number(longitudeRaw)
+
   return {
     id: floristId,
     name: String(row.name ?? ""),
@@ -20,6 +25,8 @@ export function mapFloristRow(row: Record<string, unknown>, floristId: string): 
     business_hours: (row.business_hours ?? null) as string | null,
     logo_url: (row.logo_url ?? null) as string | null,
     phone: (row.phone ?? null) as string | null,
+    latitude: Number.isFinite(latitude) ? latitude : null,
+    longitude: Number.isFinite(longitude) ? longitude : null,
     theme: (row.theme ?? null) as Record<string, unknown> | null,
     active: (row.active ?? null) as boolean | null,
     created_at: (row.created_at ?? null) as string | null,

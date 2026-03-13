@@ -18,39 +18,39 @@
        To adapt for a different flower shop, only change the
        values below. Every component uses these tokens.
        ═══════════════════════════════════════════════════════ */
-    --background: 40 30% 97%;
+    --background: 40 25% 95%;
     --foreground: 30 20% 12%;
-    --card: 40 33% 99%;
+    --card: 40 30% 98%;
     --card-foreground: 30 20% 12%;
-    --popover: 40 33% 99%;
+    --popover: 40 30% 98%;
     --popover-foreground: 30 20% 12%;
-    --primary: 152 32% 28%;
-    --primary-foreground: 40 33% 97%;
-    --secondary: 36 40% 88%;
-    --secondary-foreground: 30 20% 12%;
-    --muted: 38 25% 93%;
-    --muted-foreground: 30 12% 48%;
-    --accent: 36 55% 72%;
+    --primary: 160 33% 27%;
+    --primary-foreground: 40 30% 98%;
+    --secondary: 162 18% 51%;
+    --secondary-foreground: 40 30% 98%;
+    --muted: 38 20% 91%;
+    --muted-foreground: 30 11% 40%;
+    --accent: 352 57% 90%;
     --accent-foreground: 30 20% 12%;
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 98%;
-    --border: 36 22% 88%;
-    --input: 36 22% 88%;
-    --ring: 152 32% 28%;
-    --chart-1: 152 32% 28%;
-    --chart-2: 36 55% 72%;
-    --chart-3: 30 33% 70%;
-    --chart-4: 25 40% 50%;
-    --chart-5: 350 25% 65%;
+    --border: 36 20% 85%;
+    --input: 36 20% 85%;
+    --ring: 160 33% 27%;
+    --chart-1: 160 33% 27%;
+    --chart-2: 162 18% 51%;
+    --chart-3: 352 57% 90%;
+    --chart-4: 38 22% 72%;
+    --chart-5: 30 25% 62%;
     --radius: 0.5rem;
     --sidebar-background: 40 33% 99%;
     --sidebar-foreground: 30 20% 12%;
-    --sidebar-primary: 152 32% 28%;
-    --sidebar-primary-foreground: 40 33% 97%;
-    --sidebar-accent: 38 25% 93%;
+    --sidebar-primary: 160 33% 27%;
+    --sidebar-primary-foreground: 40 30% 98%;
+    --sidebar-accent: 38 20% 91%;
     --sidebar-accent-foreground: 30 20% 12%;
-    --sidebar-border: 36 22% 88%;
-    --sidebar-ring: 152 32% 28%;
+    --sidebar-border: 36 20% 85%;
+    --sidebar-ring: 160 33% 27%;
   }
 }
 
@@ -72,3 +72,23 @@
   margin: 1rem auto 0;
   background: hsl(var(--accent));
 }
+
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+

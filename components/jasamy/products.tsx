@@ -2,6 +2,8 @@
 
 import { useState } from "react"
 import Image from "next/image"
+import { ArrowUpRight } from "lucide-react"
+import { Reveal } from "@/components/jasamy/reveal"
 import { buildWhatsAppUrl } from "@/lib/config"
 import type { Florist, Category, Product } from "@/lib/types"
 
@@ -22,10 +24,10 @@ function ProductCard({ product, florist }: { product: Product; florist: Florist 
   )
 
   return (
-    <article className="group flex flex-col overflow-hidden border border-border/60 bg-card transition-all duration-300 hover:border-accent/50 hover:shadow-xl hover:shadow-accent/5">
+    <article className="group product-card flex flex-col overflow-hidden rounded-2xl border border-border/60 bg-card shadow-[0_8px_30px_rgba(0,0,0,0.08)] transition-all duration-300 hover:-translate-y-2 hover:border-primary/30 hover:shadow-[0_20px_40px_rgba(0,0,0,0.12)]">
       <div className="relative aspect-[4/3] overflow-hidden">
         {product.image_url ? (
-          <Image src={product.image_url} alt={product.name} fill className="object-cover transition-transform duration-700 group-hover:scale-105" />
+          <Image src={product.image_url} alt={product.name} fill className="object-cover transition-transform duration-500 group-hover:scale-105" />
         ) : (
           <div className="flex h-full items-center justify-center bg-muted text-muted-foreground">Sin imagen</div>
         )}
@@ -42,10 +44,11 @@ function ProductCard({ product, florist }: { product: Product; florist: Florist 
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 bg-primary px-5 py-2.5 text-xs font-medium uppercase tracking-widest text-primary-foreground transition-all hover:bg-primary/90"
+            className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-xs font-medium uppercase tracking-widest text-primary-foreground transition-all hover:bg-primary/90"
           >
             <WhatsAppIcon className="h-3.5 w-3.5" />
             Lo quiero
+            <ArrowUpRight className="h-3.5 w-3.5" />
           </a>
         </div>
       </div>
@@ -73,12 +76,12 @@ export function Products({ florist, categories, products }: ProductsProps) {
   return (
     <section id="productos" className="bg-background py-24 lg:py-32">
       <div className="mx-auto max-w-7xl px-6 lg:px-10">
-        <div className="mb-12 text-center">
-          <span className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Nuestro Catalogo</span>
+        <Reveal className="mb-12 text-center">
+          <span className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Nuestro Catálogo</span>
           <h2 className="ornament mt-4 font-serif text-4xl font-semibold text-foreground md:text-5xl">
             <span className="text-balance">Productos y Servicios</span>
           </h2>
-        </div>
+        </Reveal>
 
         {categories.length > 0 && (
           <div className="mb-10 flex flex-wrap items-center justify-center gap-1 border-b border-border/40">
@@ -119,8 +122,10 @@ export function Products({ florist, categories, products }: ProductsProps) {
 
         {filteredProducts.length > 0 ? (
           <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            {filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} florist={florist} />
+            {filteredProducts.map((product, index) => (
+              <Reveal key={product.id} delayMs={Math.min(index * 60, 240)}>
+                <ProductCard product={product} florist={florist} />
+              </Reveal>
             ))}
           </div>
         ) : (

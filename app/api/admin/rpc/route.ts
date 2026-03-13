@@ -17,6 +17,7 @@ const ALLOWED_FUNCTIONS = new Set([
   "sp_replace_contact_methods",
   "sp_list_social_links",
   "sp_replace_social_links",
+  "sp_upsert_florist_location",
   "sp_get_about_section",
   "sp_list_about_paragraphs",
   "sp_list_about_stats",

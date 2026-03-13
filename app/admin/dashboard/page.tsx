@@ -76,9 +76,16 @@ const createTempId = () =>
 const normalizeOrder = <T extends { sort_order: number }>(items: T[]) =>
     items.map((item, index) => ({...item, sort_order: index + 1}))
 
+const parseCoordinate = (value: string): number | null => {
+    const normalized = value.trim()
+    if (!normalized) return null
+    const parsed = Number.parseFloat(normalized)
+    return Number.isFinite(parsed) ? parsed : Number.NaN
+}
+
 const contactFieldDefs = [
-    {key: "Direccion", label: "Direccion", placeholder: "Av. Principal #123, Centro Historico, Ciudad"},
-    {key: "Telefono", label: "Telefono", placeholder: "+593 988 774 455"},
+    {key: "Direccion", label: "Dirección", placeholder: "Av. Principal #123, Centro Historico, Ciudad"},
+    {key: "Telefono", label: "Teléfono", placeholder: "+593 988 774 455"},
     {key: "Email", label: "Email", placeholder: "contacto@jasamy.com"},
     {key: "WhatsApp", label: "WhatsApp (numero)", placeholder: "593988774455"},
     {
@@ -385,6 +392,8 @@ export default function AdminDashboardPage() {
     const [about, setAbout] = useState<AboutSection | null>(null)
     const [contactMethods, setContactMethods] = useState<ContactMethod[]>([])
     const [socialLinks, setSocialLinks] = useState<SocialLink[]>([])
+    const [latitudeInput, setLatitudeInput] = useState("")
+    const [longitudeInput, setLongitudeInput] = useState("")
 
     // Modals
     const [catModal, setCatModal] = useState<{ open: boolean; editing: Category | null }>({open: false, editing: null})
@@ -467,6 +476,8 @@ export default function AdminDashboardPage() {
             )
 
             setFlorist(mappedFlorist)
+            setLatitudeInput(mappedFlorist?.latitude != null ? String(mappedFlorist.latitude) : "")
+            setLongitudeInput(mappedFlorist?.longitude != null ? String(mappedFlorist.longitude) : "")
             setCategories(mappedCategories)
             setProducts(productsByCategory.flat() as Product[])
             setPaymentMethods(
@@ -871,6 +882,45 @@ export default function AdminDashboardPage() {
         try {
             setIsSaving(true)
             setActionError("")
+
+            const parsedLatitude = parseCoordinate(latitudeInput)
+            const parsedLongitude = parseCoordinate(longitudeInput)
+
+            if (Number.isNaN(parsedLatitude) || Number.isNaN(parsedLongitude)) {
+                setActionError("Las coordenadas deben ser numeros validos.")
+                return
+            }
+
+            if (parsedLatitude != null && (parsedLatitude < -90 || parsedLatitude > 90)) {
+                setActionError("La latitud debe estar entre -90 y 90.")
+                return
+            }
+
+            if (parsedLongitude != null && (parsedLongitude < -180 || parsedLongitude > 180)) {
+                setActionError("La longitud debe estar entre -180 y 180.")
+                return
+            }
+
+            const locationResult = await adminRpc<Array<{ success: boolean; message?: string }> | {
+                success: boolean;
+                message?: string
+            }>("sp_upsert_florist_location", {
+                p_florist_id: floristId,
+                p_latitude: parsedLatitude,
+                p_longitude: parsedLongitude,
+            })
+
+            if ("error" in locationResult) {
+                setActionError("No se pudo guardar la ubicacion del mapa.")
+                return
+            }
+
+            const locationRow = Array.isArray(locationResult.data) ? locationResult.data[0] : locationResult.data
+            if (locationRow && locationRow.success === false) {
+                setActionError(locationRow.message ?? "No se pudo guardar la ubicacion del mapa.")
+                return
+            }
+
             const contactItems = contactFieldDefs
                 .map((field, index) => {
                     const value = (contactMethods.find((cm) => cm.type?.toLowerCase() === field.key.toLowerCase())?.value ?? "").trim()
@@ -1297,6 +1347,35 @@ export default function AdminDashboardPage() {
                     {activeTab === "contact" && (
                         <div className="flex flex-col gap-8">
                             <div className="flex flex-col gap-6 border border-border bg-card p-8">
+                                <h2 className="font-serif text-lg font-semibold text-foreground">Ubicacion en mapa</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Agrega las coordenadas para mostrar la ubicacion exacta en Google Maps.
+                                </p>
+                                <div className="grid gap-6 sm:grid-cols-2">
+                                    <Field label="Latitud" id="florist-latitude">
+                                        <input
+                                            id="florist-latitude"
+                                            type="text"
+                                            value={latitudeInput}
+                                            onChange={(e) => setLatitudeInput(e.target.value)}
+                                            placeholder="-0.180653"
+                                            className={inputCls}
+                                        />
+                                    </Field>
+                                    <Field label="Longitud" id="florist-longitude">
+                                        <input
+                                            id="florist-longitude"
+                                            type="text"
+                                            value={longitudeInput}
+                                            onChange={(e) => setLongitudeInput(e.target.value)}
+                                            placeholder="-78.467834"
+                                            className={inputCls}
+                                        />
+                                    </Field>
+                                </div>
+                            </div>
+
+                            <div className="flex flex-col gap-6 border border-border bg-card p-8">
                                 <h2 className="font-serif text-lg font-semibold text-foreground">Contacto</h2>
                                 <div className="grid gap-6 sm:grid-cols-2">
                                     {contactFieldDefs.map((field, index) => (
@@ -1359,7 +1438,7 @@ export default function AdminDashboardPage() {
                     {activeTab === "payments" && (
                         <div className="flex flex-col gap-6">
                             <div className="flex items-center justify-between">
-                                <h2 className="font-serif text-lg font-semibold text-foreground">Metodos de pago</h2>
+                                <h2 className="font-serif text-lg font-semibold text-foreground">Métodos de pago</h2>
                                 <button onClick={() => setPaymentModal({open: true, editing: null})}
                                         className="inline-flex items-center gap-2 bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90">
                                     <Plus className="h-4 w-4"/>Nuevo metodo
