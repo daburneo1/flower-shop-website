@@ -11,34 +11,43 @@ import { WhatsAppFloat } from "@/components/jasamy/whatsapp-float"
 import { Footer } from "@/components/jasamy/footer"
 
 export default async function Page() {
-  const data = await getFloristFullData()
+    const data = await getFloristFullData()
 
-  if (!data) {
+    if (!data) {
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-background">
+                <p className="text-lg text-muted-foreground">
+                    No se encontro la floristeria. Verifica NEXT_PUBLIC_FLORIST_ID.
+                </p>
+            </div>
+        )
+    }
+
+    const {
+        florist,
+        slides,
+        categories,
+        products,
+        paymentMethods,
+        about,
+        contactMethods,
+        socialLinks,
+    } = data
+
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <p className="text-lg text-muted-foreground">
-          No se encontro la floristeria. Verifica NEXT_PUBLIC_FLORIST_ID.
-        </p>
-      </div>
+        <>
+            <Header florist={florist} />
+            <main>
+                <Hero florist={florist} slides={slides} />
+                <About about={about} />
+                <Products florist={florist} categories={categories} products={products} />
+                <Testimonials />
+                <Gallery />
+                <PaymentMethods paymentMethods={paymentMethods} />
+                <Contact florist={florist} contactMethods={contactMethods} />
+            </main>
+            <WhatsAppFloat florist={florist} contactMethods={contactMethods} />
+            <Footer florist={florist} socialLinks={socialLinks} />
+        </>
     )
-  }
-
-  const { florist, categories, products, paymentMethods, about, contactMethods, socialLinks } = data
-
-  return (
-    <>
-      <Header florist={florist} />
-      <main>
-        <Hero florist={florist} />
-        <About about={about} />
-        <Products florist={florist} categories={categories} products={products} />
-        <Testimonials />
-        <Gallery />
-        <PaymentMethods paymentMethods={paymentMethods} />
-        <Contact florist={florist} contactMethods={contactMethods} />
-      </main>
-      <WhatsAppFloat florist={florist} contactMethods={contactMethods} />
-      <Footer florist={florist} socialLinks={socialLinks} />
-    </>
-  )
 }
