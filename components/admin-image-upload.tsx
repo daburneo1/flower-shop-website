@@ -3,7 +3,7 @@
 import React, { useRef, useState } from "react"
 import Image from "next/image"
 import { ImageIcon, Upload, X } from "lucide-react"
-import { uploadImageToSupabase } from "@/lib/storage-upload"
+import { replaceImageInSupabase } from "@/lib/storage-upload"
 import { ImageCropModal } from "@/components/image-crop-modal"
 
 type AdminImageUploadProps = {
@@ -12,6 +12,7 @@ type AdminImageUploadProps = {
     onChange: (url: string) => void
     folder?: string
     cropAspect?: number | null
+    previousValue?: string | null
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -29,6 +30,7 @@ export function AdminImageUpload({
                                      onChange,
                                      folder = "admin",
                                      cropAspect = null,
+                                     previousValue = null,
                                  }: AdminImageUploadProps) {
     const inputRef = useRef<HTMLInputElement | null>(null)
     const [dragging, setDragging] = useState(false)
@@ -41,7 +43,13 @@ export function AdminImageUpload({
         try {
             setError("")
             setUploading(true)
-            const result = await uploadImageToSupabase(file, folder)
+
+            const result = await replaceImageInSupabase({
+                file,
+                folder,
+                previousUrl: value || previousValue,
+            })
+
             onChange(result.url)
             setPendingImageSrc("")
         } catch (err) {
@@ -165,12 +173,9 @@ export function AdminImageUpload({
                 </div>
 
                 {value && (
-                    <input
-                        type="text"
-                        value={value}
-                        onChange={(e) => onChange(e.target.value)}
-                        className="rounded-sm border border-input bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-primary"
-                    />
+                    <p className="text-xs text-muted-foreground">
+                        Imagen cargada correctamente.
+                    </p>
                 )}
 
                 {error && (

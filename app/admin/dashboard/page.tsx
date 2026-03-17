@@ -1,9 +1,9 @@
 "use client"
 
-import React, {useState, useEffect, useCallback} from "react"
+import React, { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import Image from "next/image"
-import {useRouter} from "next/navigation"
+import { useRouter } from "next/navigation"
 import {
     LayoutDashboard,
     Package,
@@ -19,8 +19,10 @@ import {
     CreditCard,
     Info,
 } from "lucide-react"
-import {clearAdminSession, getAdminSession} from "@/lib/admin-auth"
-import {adminRpc} from "@/lib/admin-rpc"
+import { AdminImageUpload } from "@/components/admin-image-upload"
+import { clearAdminSession, getAdminSession, updateAdminPassword } from "@/lib/admin-auth"
+import { adminRpc } from "@/lib/admin-rpc"
+import { deleteImageFromSupabaseByUrl } from "@/lib/storage-upload"
 import {
     mapAboutRow,
     mapCategoryRow,
@@ -41,7 +43,6 @@ import type {
     ContactMethod,
     SocialLink,
 } from "@/lib/types"
-import {AdminImageUpload} from "@/components/admin-image-upload";
 
 const floristId = process.env.NEXT_PUBLIC_FLORIST_ID ?? ""
 
@@ -232,11 +233,12 @@ function ProductModal({product, categories, onSave, onClose}: {
                                                                  onChange={(e) => setPrice(e.target.value)}
                                                                  className={inputCls} required/></Field>
                 <AdminImageUpload
-                    label="Imagen del producto"
+                    label="Imágen del producto"
                     value={image}
                     onChange={setImage}
                     folder="products"
                     cropAspect={5 / 4}
+                    previousValue={product?.image_url ?? null}
                 />
                 <div className="mt-2 flex gap-3">
                     <button type="submit"
@@ -288,6 +290,7 @@ function ProviderModal({provider, paymentMethods, onSave, onClose}: {
                     onChange={setQrUrl}
                     folder="qr"
                     cropAspect={1}
+                    previousValue={provider?.qr_code_url ?? provider?.qr_image_url ?? null}
                 />
                 <div className="mt-2 flex gap-3">
                     <button type="submit"
@@ -379,7 +382,6 @@ export default function AdminDashboardPage() {
     const [saved, setSaved] = useState(false)
     const [isLoading, setIsLoading] = useState(true)
     const [showPassModal, setShowPassModal] = useState(false)
-    const [oldPass, setOldPass] = useState("")
     const [newPass, setNewPass] = useState("")
     const [passError, setPassError] = useState("")
 
@@ -394,6 +396,7 @@ export default function AdminDashboardPage() {
     const [socialLinks, setSocialLinks] = useState<SocialLink[]>([])
     const [latitudeInput, setLatitudeInput] = useState("")
     const [longitudeInput, setLongitudeInput] = useState("")
+    const [originalAboutImageUrl, setOriginalAboutImageUrl] = useState<string | null>(null)
 
     // Modals
     const [catModal, setCatModal] = useState<{ open: boolean; editing: Category | null }>({open: false, editing: null})
@@ -544,6 +547,7 @@ export default function AdminDashboardPage() {
                 paragraphs: mappedParagraphs.length > 0 ? mappedParagraphs : fallbackParagraphs,
                 stats: mappedStats.length > 0 ? mappedStats : baseAbout.stats,
             })
+            setOriginalAboutImageUrl(baseAbout.image_url ?? null)
             const contactRows = "data" in contactResult ? contactResult.data : []
             const socialRows = "data" in socialResult ? socialResult.data : []
 
@@ -579,13 +583,18 @@ export default function AdminDashboardPage() {
     }, [])
 
     useEffect(() => {
-        const session = getAdminSession()
-        if (!session || session.floristId !== floristId) {
-            router.replace("/admin")
-            return
+        const validateSession = async () => {
+            const session = await getAdminSession()
+
+            if (!session || session.floristId !== floristId) {
+                router.replace("/admin")
+                return
+            }
+
+            await loadData()
         }
 
-        void loadData()
+        void validateSession()
     }, [router, loadData])
 
     // ── Category CRUD ──
@@ -637,7 +646,9 @@ export default function AdminDashboardPage() {
             setIsSaving(true)
             setActionError("")
 
-            await adminRpc("sp_upsert_product", {
+            const previousImageUrl = prodModal.editing?.image_url ?? null
+
+            const result = await adminRpc("sp_upsert_product", {
                 p_florist_id: floristId,
                 p_product_id: prodModal.editing?.id ?? null,
                 p_category_id: data.category_id,
@@ -646,6 +657,19 @@ export default function AdminDashboardPage() {
                 p_price: data.price,
                 p_image_url: data.image_url,
             })
+
+            if ("error" in result) {
+                setActionError("No se pudo guardar el producto.")
+                return
+            }
+
+            if (previousImageUrl && previousImageUrl !== data.image_url) {
+                try {
+                    await deleteImageFromSupabaseByUrl(previousImageUrl)
+                } catch {
+                    // No bloquea la actualización si falla la limpieza del archivo anterior.
+                }
+            }
 
             setProdModal({ open: false, editing: null })
             flash()
@@ -662,6 +686,8 @@ export default function AdminDashboardPage() {
             setIsSaving(true)
             setActionError("")
 
+            const imageUrl = products.find((product) => product.id === id)?.image_url ?? null
+
             const result = await adminRpc<Array<{ success: boolean; message?: string }> | { success: boolean; message?: string }>("sp_delete_product", {
                 p_product_id: id,
             })
@@ -677,6 +703,14 @@ export default function AdminDashboardPage() {
                 return
             }
 
+            if (imageUrl) {
+                try {
+                    await deleteImageFromSupabaseByUrl(imageUrl)
+                } catch {
+                    // No bloquea la eliminación del registro si falla la limpieza del archivo.
+                }
+            }
+
             setConfirmDelete(null)
             flash()
             await loadData()
@@ -690,7 +724,13 @@ export default function AdminDashboardPage() {
         try {
             setIsSaving(true)
             setActionError("")
-            await adminRpc("sp_upsert_mobile_payment_provider", {
+
+            const previousImageUrl =
+                providerModal.editing?.qr_code_url ??
+                providerModal.editing?.qr_image_url ??
+                null
+
+            const result = await adminRpc("sp_upsert_mobile_payment_provider", {
                 p_florist_id: floristId,
                 p_provider_id: providerModal.editing?.id ?? null,
                 p_payment_method_id: data.payment_method_id,
@@ -698,7 +738,21 @@ export default function AdminDashboardPage() {
                 p_qr_image_url: data.qr_code_url,
                 p_sort_order: providerModal.editing?.sort_order ?? 1,
             })
-            setProviderModal({open: false, editing: null})
+
+            if ("error" in result) {
+                setActionError(result.error.message ?? "No se pudo guardar el proveedor.")
+                return
+            }
+
+            if (previousImageUrl && previousImageUrl !== data.qr_code_url) {
+                try {
+                    await deleteImageFromSupabaseByUrl(previousImageUrl)
+                } catch {
+                    // No bloquea la actualización si falla la limpieza del archivo anterior.
+                }
+            }
+
+            setProviderModal({ open: false, editing: null })
             flash()
             await loadData()
         } catch {
@@ -709,24 +763,42 @@ export default function AdminDashboardPage() {
     }
 
     const deleteProvider = async (id: string) => {
-        const result = await adminRpc<Array<{ success: boolean; message?: string }> | {
-            success: boolean;
-            message?: string
-        }>("sp_delete_provider", {
-            p_provider_id: id,
-        })
-        if ("error" in result) {
-            alert("Error al eliminar el proveedor.")
-            return
+        try {
+            setIsSaving(true)
+            setActionError("")
+
+            const provider = providers.find((item) => item.id === id)
+            const imageUrl = provider?.qr_code_url ?? provider?.qr_image_url ?? null
+
+            const result = await adminRpc<Array<{ success: boolean; message?: string }> | { success: boolean; message?: string }>("sp_delete_provider", {
+                p_provider_id: id,
+            })
+
+            if ("error" in result) {
+                alert("Error al eliminar el proveedor.")
+                return
+            }
+
+            const row = Array.isArray(result.data) ? result.data[0] : result.data
+            if (!row?.success) {
+                alert(row?.message ?? "No se puede eliminar el proveedor.")
+                return
+            }
+
+            if (imageUrl) {
+                try {
+                    await deleteImageFromSupabaseByUrl(imageUrl)
+                } catch {
+                    // No bloquea la eliminación del registro si falla la limpieza del archivo.
+                }
+            }
+
+            setConfirmDelete(null)
+            flash()
+            await loadData()
+        } finally {
+            setIsSaving(false)
         }
-        const row = Array.isArray(result.data) ? result.data[0] : result.data
-        if (!row?.success) {
-            alert(row?.message ?? "No se puede eliminar el proveedor.")
-            return
-        }
-        setConfirmDelete(null)
-        flash()
-        loadData()
     }
 
     // ── Payment Method CRUD ──
@@ -784,9 +856,13 @@ export default function AdminDashboardPage() {
     // ── About save ──
     const saveAbout = async () => {
         if (!about) return
+
         try {
             setIsSaving(true)
             setActionError("")
+
+            const previousImageUrl = originalAboutImageUrl
+
             const paragraphPayload = (about.paragraphs ?? [])
                 .map((p, index) => ({
                     content: p.content.trim(),
@@ -802,22 +878,51 @@ export default function AdminDashboardPage() {
                 }))
                 .filter((s) => s.label.length > 0 && s.value.length > 0)
 
-            await adminRpc("sp_upsert_about_section", {
+            const nextImageUrl = about.image_url ?? null
+
+            const aboutResult = await adminRpc("sp_upsert_about_section", {
                 p_florist_id: floristId,
                 p_title: about.title ?? null,
-                p_content: paragraphPayload.length > 0 ? paragraphPayload.map((p) => p.content).join("\n\n") : (about.description ?? about.content ?? null),
-                p_image_url: about.image_url ?? null,
+                p_content: paragraphPayload.length > 0
+                    ? paragraphPayload.map((p) => p.content).join("\n\n")
+                    : (about.description ?? about.content ?? null),
+                p_image_url: nextImageUrl,
             })
 
-            await adminRpc("sp_replace_about_paragraphs", {
+            if ("error" in aboutResult) {
+                setActionError("No se pudo guardar la seccion Nosotros.")
+                return
+            }
+
+            const paragraphsResult = await adminRpc("sp_replace_about_paragraphs", {
                 p_florist_id: floristId,
                 p_items: paragraphPayload,
             })
 
-            await adminRpc("sp_replace_about_stats", {
+            if ("error" in paragraphsResult) {
+                setActionError("No se pudieron guardar los parrafos.")
+                return
+            }
+
+            const statsResult = await adminRpc("sp_replace_about_stats", {
                 p_florist_id: floristId,
                 p_items: statsPayload,
             })
+
+            if ("error" in statsResult) {
+                setActionError("No se pudieron guardar las estadisticas.")
+                return
+            }
+
+            if (previousImageUrl && previousImageUrl !== nextImageUrl) {
+                try {
+                    await deleteImageFromSupabaseByUrl(previousImageUrl)
+                } catch {
+                    // No bloquea la actualización si falla la limpieza del archivo anterior.
+                }
+            }
+
+            setOriginalAboutImageUrl(nextImageUrl)
             flash()
             await loadData()
         } catch {
@@ -1005,36 +1110,38 @@ export default function AdminDashboardPage() {
 
     // ── Logout ──
     const handleLogout = async () => {
-        clearAdminSession()
+        await clearAdminSession()
         router.replace("/admin")
+        router.refresh()
     }
 
     const changePassword = async (e: React.FormEvent) => {
         e.preventDefault()
         setPassError("")
-        const session = getAdminSession()
+
+        const session = await getAdminSession()
         if (!session) {
             setPassError("Sesion no valida")
             return
         }
-        const result = await adminRpc<Array<{ ok: boolean }> | { ok: boolean }>("sp_admin_change_password", {
-            p_florist_id: floristId,
-            p_email: session.email,
-            p_old_password: oldPass,
-            p_new_password: newPass,
-        })
-        if ("error" in result) {
-            setPassError("No se pudo cambiar la contrasena")
+
+        if (!newPass.trim()) {
+            setPassError("La nueva contrasena es obligatoria")
             return
         }
-        const row = Array.isArray(result.data) ? result.data[0] : result.data
-        if (!row?.ok) {
-            setPassError("No se pudo cambiar la contrasena")
+
+        if (newPass.length < 6) {
+            setPassError("La nueva contrasena debe tener al menos 6 caracteres")
             return
         }
-        setShowPassModal(false)
-        setOldPass("")
-        setNewPass("")
+
+        try {
+            await updateAdminPassword(newPass)
+            setShowPassModal(false)
+            setNewPass("")
+        } catch (error) {
+            setPassError(error instanceof Error ? error.message : "No se pudo cambiar la contrasena")
+        }
     }
 
     const getCategoryName = (cid: string) => categories.find((c) => c.id === cid)?.name ?? "Sin categoria"
@@ -1246,11 +1353,12 @@ export default function AdminDashboardPage() {
                                            className={inputCls}/>
                                 </Field>
                                 <AdminImageUpload
-                                    label="Imagen de la sección"
+                                    label="Imagen de la seccion"
                                     value={about.image_url ?? ""}
-                                    onChange={(url) => setAbout({...about, image_url: url})}
+                                    onChange={(url) => setAbout({ ...about, image_url: url })}
                                     folder="about"
                                     cropAspect={null}
+                                    previousValue={about.image_url ?? null}
                                 />
                             </div>
 
@@ -1554,25 +1662,30 @@ export default function AdminDashboardPage() {
                 <ModalShell title="Cambiar contrasena" onClose={() => setShowPassModal(false)}>
                     <form onSubmit={changePassword} className="flex flex-col gap-4">
                         {passError && (
-                            <div
-                                className="rounded-sm border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
+                            <div className="rounded-sm border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-sm text-destructive">
                                 {passError}
                             </div>
                         )}
-                        <Field label="Contrasena actual" id="old-pass">
-                            <input id="old-pass" type="password" value={oldPass}
-                                   onChange={(e) => setOldPass(e.target.value)} className={inputCls} required/>
-                        </Field>
                         <Field label="Nueva contrasena" id="new-pass">
-                            <input id="new-pass" type="password" value={newPass}
-                                   onChange={(e) => setNewPass(e.target.value)} className={inputCls} required/>
+                            <input
+                                id="new-pass"
+                                type="password"
+                                value={newPass}
+                                onChange={(e) => setNewPass(e.target.value)}
+                                className={inputCls}
+                                required
+                            />
                         </Field>
                         <div className="mt-2 flex gap-3">
-                            <button type="submit"
-                                    className="flex-1 rounded-sm bg-primary py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">Guardar
+                            <button type="submit" className="flex-1 rounded-sm bg-primary py-2.5 text-sm font-medium text-primary-foreground hover:bg-primary/90">
+                                Guardar
                             </button>
-                            <button type="button" onClick={() => setShowPassModal(false)}
-                                    className="flex-1 rounded-sm border border-border bg-transparent py-2.5 text-sm font-medium text-foreground hover:bg-muted">Cancelar
+                            <button
+                                type="button"
+                                onClick={() => setShowPassModal(false)}
+                                className="flex-1 rounded-sm border border-border bg-transparent py-2.5 text-sm font-medium text-foreground hover:bg-muted"
+                            >
+                                Cancelar
                             </button>
                         </div>
                     </form>
